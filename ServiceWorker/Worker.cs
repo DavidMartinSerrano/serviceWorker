@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using ServiceWorker.Configuration;
 using ServiceWorker.Utilities;
 using System;
 using System.Threading;
@@ -11,15 +13,26 @@ namespace ServiceWorker
     {
         private readonly ILogger<Worker> _logger;
         private readonly ITranscriptionQueueManager _transcriptionQueueManager;
+        private readonly IOptions<AppConfig> _appConfig;
+        private readonly bool _startImmediately;
 
-        public Worker(ILogger<Worker> logger, ITranscriptionQueueManager transcriptionQueueManager)
+        public Worker(ILogger<Worker> logger, ITranscriptionQueueManager transcriptionQueueManager, IOptions<AppConfig> appConfig)
         {            
             _logger = logger;
             _transcriptionQueueManager = transcriptionQueueManager;
+            _appConfig = appConfig;
+            _startImmediately = appConfig.Value.StartImmediately;
+
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            if (_startImmediately)
+            {
+                _logger.LogInformation("Starting processing files immediately.");
+                await _transcriptionQueueManager.ProcessFilesAsync(stoppingToken);
+            }
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 var now = DateTime.Now;

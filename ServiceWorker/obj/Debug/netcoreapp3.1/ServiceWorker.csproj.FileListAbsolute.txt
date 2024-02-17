@@ -49,4 +49,3 @@ C:\Users\david.martin\source\repos\ServiceWorker\ServiceWorker\bin\Debug\netcore
 C:\Users\david.martin\source\repos\ServiceWorker\ServiceWorker\bin\Debug\netcoreapp3.1\Microsoft.Bcl.TimeProvider.dll
 C:\Users\david.martin\source\repos\ServiceWorker\ServiceWorker\bin\Debug\netcoreapp3.1\Polly.dll
 C:\Users\david.martin\source\repos\ServiceWorker\ServiceWorker\bin\Debug\netcoreapp3.1\Polly.Core.dll
-C:\Users\david.martin\source\repos\ServiceWorker\ServiceWorker\obj\Debug\netcoreapp3.1\ServiceWorker.csproj.AssemblyReference.cache

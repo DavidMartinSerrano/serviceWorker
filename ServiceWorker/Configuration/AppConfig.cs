@@ -6,6 +6,7 @@ namespace ServiceWorker.Configuration
 {
     public class AppConfig
     {
+        public bool StartImmediately { get; set; }
         public string FilePath { get; set; }
         public int MinFileSize { get; set; }
         public int MaxFileSize { get; set; }
