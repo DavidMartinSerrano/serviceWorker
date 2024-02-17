@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
+using ServiceWorker.Configuration;
 using ServiceWorker.Services;
 using System;
 using System.IO;
@@ -12,13 +14,18 @@ namespace Tests
 {
     public class AudioTranscriptionServiceTests
     {
-      
+
         private readonly Mock<ILogger<AudioTranscriptionService>> mockLogger = new Mock<ILogger<AudioTranscriptionService>>();
-        private const string testFilePath = "test.mp3"; 
+        private const string testFilePath = "test.mp3";
+        private readonly Mock<IOptions<AppConfig>> _configMock;
 
         public AudioTranscriptionServiceTests()
         {
-            
+            _configMock = new Mock<IOptions<AppConfig>>();
+            _configMock.Setup(x => x.Value).Returns(new AppConfig
+            {           
+                FilePath = "C:\\Test\\"
+            });
         }
 
 
@@ -33,7 +40,7 @@ namespace Tests
                     Content = new StringContent("Transcription result")
                 });
 
-            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object);
+            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
             var result = await service.TranscribeAudioAsync(testFilePath);
 
@@ -49,7 +56,7 @@ namespace Tests
             mockHttpService.Setup(x => x.PostAsync(It.IsAny<string>(), It.IsAny<HttpContent>()))
                            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.BadRequest));
 
-            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object);
+            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
             await Assert.ThrowsAsync<HttpRequestException>(() => service.TranscribeAudioAsync(testFilePath));
 
@@ -79,7 +86,7 @@ namespace Tests
                 It.IsAny<Exception>(),
                 (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()));
 
-            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object);
+            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.TranscribeAudioAsync(testFilePath));
 
@@ -97,7 +104,7 @@ namespace Tests
             var mockHttpService = new Mock<IHttpService>();
             var mockLogger = new Mock<ILogger<AudioTranscriptionService>>();
 
-            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object);
+            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
             await Assert.ThrowsAsync<FileNotFoundException>(() => service.TranscribeAudioAsync("invalid/testFilePath"));
         }
@@ -117,7 +124,7 @@ namespace Tests
                 It.IsAny<Exception>(),
                 (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()));
 
-            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object);
+            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
             await Assert.ThrowsAsync<TaskCanceledException>(() => service.TranscribeAudioAsync(testFilePath));
 

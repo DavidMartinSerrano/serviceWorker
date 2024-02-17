@@ -7,6 +7,7 @@ using System;
 using ServiceWorker.Configuration;
 using ServiceWorker.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ServiceWorker.Utilities
 {  
@@ -19,9 +20,9 @@ namespace ServiceWorker.Utilities
         private readonly IFileValidator _fileValidator;
         private SemaphoreSlim _semaphore = new SemaphoreSlim(3); // Allows up to 3 concurrent tasks
 
-        public TranscriptionQueueManager(AppConfig config, IAudioTranscriptionService transcriptionService, ILogger<TranscriptionQueueManager> logger, IFileValidator fileValidator)
+        public TranscriptionQueueManager(IOptions<AppConfig> appConfig, IAudioTranscriptionService transcriptionService, ILogger<TranscriptionQueueManager> logger, IFileValidator fileValidator)
         {
-            _config = config;
+            _config = appConfig.Value;
             _transcriptionService = transcriptionService;
             _logger = logger;
             _fileValidator = fileValidator;

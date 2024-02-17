@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
+using ServiceWorker.Configuration;
 using System;
 using System.IO;
 using System.Net.Http;
@@ -10,13 +12,15 @@ namespace ServiceWorker.Services
 {
     public class AudioTranscriptionService : IAudioTranscriptionService
     {
+        private readonly AppConfig _config;
         private readonly IHttpService _httpService;
         private readonly ILogger<AudioTranscriptionService> _logger;
         private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
         private const string userLoginProfile = "FakedUserLoginProfile";
 
-        public AudioTranscriptionService(IHttpService httpService, ILogger<AudioTranscriptionService> logger)
+        public AudioTranscriptionService(IHttpService httpService, ILogger<AudioTranscriptionService> logger, IOptions<AppConfig> config)
         {
+            _config = config.Value;
             _httpService = httpService ?? throw new ArgumentNullException(nameof(httpService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -49,7 +53,7 @@ namespace ServiceWorker.Services
                 // and avoid adding more mocks now to unit tests, etc..)
                 content.Add(new StringContent(userLoginProfile), "metadata");
 
-                var response = await _retryPolicy.ExecuteAsync(() => _httpService.PostAsync("YOUR_TRANSCRIPTION_SERVICE_ENDPOINT", content));
+                var response = await _retryPolicy.ExecuteAsync(() => _httpService.PostAsync(_config.InvoxMedicalServiceEndpoint, content));
 
                 response.EnsureSuccessStatusCode();
 
