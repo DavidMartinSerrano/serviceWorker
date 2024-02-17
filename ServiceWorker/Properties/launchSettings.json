@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "ServiceWorker": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
