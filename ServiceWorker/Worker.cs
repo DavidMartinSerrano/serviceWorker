@@ -21,7 +21,7 @@ namespace ServiceWorker
             _logger = logger;
             _transcriptionQueueManager = transcriptionQueueManager;
             _appConfig = appConfig;
-            _startImmediately = appConfig.Value.StartImmediately;
+            _startImmediately = _appConfig.Value.StartImmediately;
 
         }
 

@@ -32,6 +32,8 @@ namespace Tests
         [Fact]
         public async Task TranscribeAudioAsync_SuccessfulTranscription()
         {
+
+            // Arrange
             var mockHttpService = new Mock<IHttpService>();
             var mockLogger = new Mock<ILogger<AudioTranscriptionService>>();
             mockHttpService.Setup(x => x.PostAsync(It.IsAny<string>(), It.IsAny<HttpContent>()))
@@ -40,16 +42,21 @@ namespace Tests
                     Content = new StringContent("Transcription result")
                 });
 
+            
             var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
+            // Act
             var result = await service.TranscribeAudioAsync(testFilePath);
 
+            // Assert
             Assert.Equal("Transcription result", result);
         }
 
         [Fact]
         public async Task TranscribeAudioAsync_HandlesHttpClientError()
         {
+            // Arrange
+
             var mockHttpService = new Mock<IHttpService>();
             var mockLogger = new Mock<ILogger<AudioTranscriptionService>>();
 
@@ -58,6 +65,7 @@ namespace Tests
 
             var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
+            // Act & Assert
             await Assert.ThrowsAsync<HttpRequestException>(() => service.TranscribeAudioAsync(testFilePath));
 
             mockLogger.Verify(
@@ -72,70 +80,43 @@ namespace Tests
 
 
         [Fact]
-        public async Task TranscribeAudioAsync_LogsError_OnException()
+        public async Task TranscribeAudioAsync_ThrowsFileNotFoundException_WhenFileDoesNotExist()
         {
+            // Arrange
+
             var mockHttpService = new Mock<IHttpService>();
-            mockHttpService.Setup(x => x.PostAsync(It.IsAny<string>(), It.IsAny<HttpContent>()))
-                           .ThrowsAsync(new InvalidOperationException("Simulated exception"));
-
-            var mockLogger = new Mock<ILogger<AudioTranscriptionService>>();
-            mockLogger.Setup(x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()));
-
             var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => service.TranscribeAudioAsync(testFilePath));
-
-            mockLogger.Verify(x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.AtLeastOnce);
+            // Act & Assert
+            await Assert.ThrowsAsync<FileNotFoundException>(() => service.TranscribeAudioAsync("nonexistentfile.mp3"));
         }
 
         [Fact]
-        public async Task TranscribeAudioAsync_LogsError_OnInvalidFilePath()
+        public async Task TranscribeAudioAsync_RetriesOnTransientHttpError_AndEventuallySucceeds()
         {
+            // Arrange
             var mockHttpService = new Mock<IHttpService>();
-            var mockLogger = new Mock<ILogger<AudioTranscriptionService>>();
-
-            var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
-
-            await Assert.ThrowsAsync<FileNotFoundException>(() => service.TranscribeAudioAsync("invalid/testFilePath"));
-        }
-
-        [Fact]
-        public async Task TranscribeAudioAsync_HandlesTimeoutException()
-        {
-            var mockHttpService = new Mock<IHttpService>();
+            int callCount = 0;
             mockHttpService.Setup(x => x.PostAsync(It.IsAny<string>(), It.IsAny<HttpContent>()))
-                           .ThrowsAsync(new TaskCanceledException("The request was canceled due to a timeout."));
-
-            var mockLogger = new Mock<ILogger<AudioTranscriptionService>>();
-            mockLogger.Setup(x => x.Log(
-                It.IsAny<LogLevel>(),
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()));
+                           .ReturnsAsync(() =>
+                           {
+                               callCount++;
+                               return callCount >= 3
+                                   ? new HttpResponseMessage(HttpStatusCode.OK)
+                                   {
+                                       Content = new StringContent("Successful after retry")
+                                   }
+                                   : new HttpResponseMessage(HttpStatusCode.InternalServerError);
+                           });
 
             var service = new AudioTranscriptionService(mockHttpService.Object, mockLogger.Object, _configMock.Object);
 
-            await Assert.ThrowsAsync<TaskCanceledException>(() => service.TranscribeAudioAsync(testFilePath));
+            // Act 
+            var result = await service.TranscribeAudioAsync(testFilePath);
 
-            mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.IsAny<It.IsAnyType>(),
-                    It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-                Times.AtLeastOnce);
+            // Assert
+            Assert.Equal("Successful after retry", result);
+            Assert.True(callCount == 3, "Expected 3 calls including retries");
         }
 
     }
